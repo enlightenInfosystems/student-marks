@@ -100,9 +100,9 @@ async function search() {
   }
 
   // CHECK IN GOOGLE SHEET
-  let checkURL = `${scriptURL}?action=check&enroll=${record['Enrollment']}`;
+ // let checkURL = `${scriptURL}?action=check&enroll=${record['Enrollment']}`;
  
-  let check = await fetch(checkURL).then(res => res.text());
+//  let check = await fetch(checkURL).then(res => res.text());
 /*
   if (check === "FOUND") {
     document.getElementById("result").innerHTML = `
@@ -231,6 +231,7 @@ function saveConfirmation(ug, enroll, name) {
 
 </body>
 </html>
+
 
 
 
