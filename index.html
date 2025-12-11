@@ -11,10 +11,13 @@
     th, td {
       border: 1px solid #333;
       padding: 8px;
-      text-align: left;
     }
     th {
       background: #f0f0f0;
+    }
+    #confirmBox {
+      margin-top: 20px;
+      font-size: 18px;
     }
   </style>
 </head>
@@ -28,13 +31,14 @@
 <div id="result"></div>
 
 <script>
+const scriptURL = "https://script.google.com/macros/s/AKfycbzu0ZAhd9q2eTOzcjvirmIhYppI_q_nY_1CkaDV9FUncGwKSKEjoWhkSeiTcsxfLFmA/exec";
+
 async function search() {
   const id = document.getElementById("idInput").value.trim();
 
   const response = await fetch("data.json");
   const data = await response.json();
 
-  // Search by ID, Enrollment, or UG No
   const record = data.find(item => 
       item["Enrollment"] === id ||
       item["UG No."] === id ||
@@ -44,23 +48,37 @@ async function search() {
   if (record) {
     let tableHTML = "<h3>Record Found:</h3><table>";
 
-    // Table header + rows
     for (const key in record) {
       tableHTML += `
         <tr>
           <th>${key}</th>
           <td>${record[key]}</td>
-        </tr>
-      `;
+        </tr>`;
     }
 
     tableHTML += "</table>";
+
+    // Add checkbox
+    tableHTML += `
+      <div id="confirmBox">
+        <label>
+          <input type="checkbox" onchange="saveConfirmation('${record['UG No.']}', '${record['Enrollment']}', '${record['Name']}')">
+          ✔ I confirm this information is correct
+        </label>
+      </div>
+    `;
 
     document.getElementById("result").innerHTML = tableHTML;
 
   } else {
     document.getElementById("result").innerHTML = "❌ No record found";
   }
+}
+
+function saveConfirmation(ug, enroll, name) {
+  fetch(`${scriptURL}?action=save&ug=${encodeURIComponent(ug)}&enroll=${encodeURIComponent(enroll)}&name=${encodeURIComponent(name)}`)
+    .then(() => alert("✔ Saved to Google Sheet"))
+    .catch(() => alert("❌ Error saving data"));
 }
 </script>
 
