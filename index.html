@@ -5,12 +5,12 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f8f9fa;
       margin: 30px;
+      background: #f8f9fa;
     }
     h2 { text-align: center; }
     .container {
-      max-width: 900px;
+      max-width: 950px;
       margin: auto;
       background: white;
       padding: 20px 30px;
@@ -19,7 +19,7 @@
     }
     input {
       padding: 10px;
-      width: 250px;
+      width: 260px;
       font-size: 16px;
     }
     button {
@@ -34,18 +34,23 @@
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 25px;
       margin-top: 20px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 10px;
     }
     th, td {
       border: 1px solid #444;
       padding: 8px;
     }
     th { background: #efefef; }
+    #confirmBox {
+      margin-top: 20px;
+      font-size: 18px;
+    }
   </style>
 </head>
 
@@ -58,26 +63,22 @@
   <button onclick="search()">Search</button>
 
   <div id="result"></div>
-  <div id="confirmBox">
-  <label>
-    <input id="confirmCheck" type="checkbox"
-           onchange="saveConfirmation('${record['UG No.']}', '${record['Enrollment']}', '${record['Name']}')">
-    ✔ I confirm this information is correct
-  </label>
-</div>
-
 </div>
 
 <script>
+const scriptURL = "https://script.google.com/macros/s/AKfycbwjjT0-eaVHyNiWaiE5zjhR6ceONH4Bl1kL82s-7Y8TbFc4VUlJFLyFPqvoCeO4uIrs/exec";
 
+// Normalize subject name (remove TH/PR text)
 function cleanName(name) {
   return name
-    .replace("-TH", "")
-    .replace("(TH)", "")
-    .replace("-PR", "")
-    .replace("(PR)", "")
-    .replace("  ", " ")
+    .replace(/-TH|\(TH\)|-PR|\(PR\)/g, "")
+    .replace(/  +/g, " ")
     .trim();
+}
+
+// Fix mismatched subject names like "AI & ML" vs "AI &ML"
+function normalize(name) {
+  return name.replace(/\s+/g, "").replace(/[-()]/g, "").toLowerCase();
 }
 
 async function search() {
@@ -96,19 +97,19 @@ async function search() {
     return;
   }
 
-  // Student Details
+  // Student info table
   let detailsHTML = `
     <h3>Student Details</h3>
     <table>
       <tr><th>Name</th><td>${record["Name"]}</td></tr>
       <tr><th>Enrollment</th><td>${record["Enrollment"]}</td></tr>
-      <tr><th>UG No</th><td>${record["UG No."]}</td></tr>
-      <tr><th>Program</th><td>${record["Program"]}</td></tr>
-      <tr><th>Status</th><td>${record["Status"]}</td></tr>
+      <tr><th>UG No.</th><td>${record["UG No."]}</td></tr>
+      <tr><th>Program</th><td>${record["Program"] || "-"}</td></tr>
+      <tr><th>Status</th><td>${record["Status"] || "-"}</td></tr>
     </table>
   `;
 
-  // Marks Table
+  // Marks table
   let marksHTML = `
     <h3>Marks</h3>
     <table>
@@ -119,41 +120,34 @@ async function search() {
       </tr>
   `;
 
-  // Loop keys once, process subjects
-  Object.keys(record).forEach(key => {
+  let usedKeys = new Set();
 
-    // THEORY SUBJECTS
+  Object.keys(record).forEach(key => {
+    if (usedKeys.has(key)) return;
+
+    // Detect THEORY keys
     if (key.match(/(TH)\)?$/)) {
 
       let subject = cleanName(key);
       let theory = record[key];
       let practical = "-";
 
-      // Base subject name (removes TH)
-      let base = key
-        .replace("-TH", "")
-        .replace("(TH)", "")
-        .replace("TH", "")
-        .trim();
+      let base = cleanName(key);
 
-      // Possible PR forms
-      let possiblePR = [
-        base + "-PR",
-        base + "(PR)",
-        base + " (PR)",
-        base.replace("(TH)", "(PR)"),
-        base.replace("-TH", "-PR"),
-        base.replace("TH", "PR"),
-        base.replace(" - ", " ") + "-PR"
-      ];
+      let normBase = normalize(base);
 
-      // Find matching PR value
-      for (let prKey of possiblePR) {
-        if (record[prKey] !== undefined) {
-          practical = record[prKey];
-          break;
-        }
+      // SEARCH for matching PR
+      let prKey = Object.keys(record).find(k =>
+        normalize(cleanName(k)) === normBase &&
+        (k.endsWith("-PR") || k.endsWith("(PR)"))
+      );
+
+      if (prKey) {
+        practical = record[prKey];
+        usedKeys.add(prKey);
       }
+
+      usedKeys.add(key);
 
       marksHTML += `
         <tr>
@@ -164,13 +158,16 @@ async function search() {
       `;
     }
 
-    // SINGLE-VALUE SUBJECTS (no TH/PR)
+    // Single-value subjects (no TH/PR)
     else if (
       typeof record[key] === "string" &&
-      !key.endsWith("-PR") &&
-      !key.endsWith("(PR)") &&
-      !key.match(/(TH)\)?$/) &&
-      !["Enrollment","UG No.","Name","Program","Status","S.N."].some(x => key.includes(x))
+      !key.includes("Enrollment") &&
+      !key.includes("UG No") &&
+      !key.includes("Name") &&
+      !key.includes("Program") &&
+      !key.includes("Status") &&
+      !key.includes("S.N.") &&
+      !key.match(/(TH|PR)\)?$/)
     ) {
       marksHTML += `
         <tr>
@@ -180,40 +177,43 @@ async function search() {
         </tr>
       `;
     }
-
   });
 
-  marksHTML += `</table>`;
+  marksHTML += "</table>";
 
+  // Display both tables + checkbox
   document.getElementById("result").innerHTML = `
     <div class="grid">
       <div>${detailsHTML}</div>
       <div>${marksHTML}</div>
     </div>
+
+    <div id="confirmBox">
+      <label>
+        <input id="confirmCheck" type="checkbox"
+          onchange="saveConfirmation('${record['UG No.']}', '${record['Enrollment']}', '${record['Name']}')">
+        ✔ I confirm this information is correct
+      </label>
+    </div>
   `;
 }
-const scriptURL = "https://script.google.com/macros/s/AKfycbwjjT0-eaVHyNiWaiE5zjhR6ceONH4Bl1kL82s-7Y8TbFc4VUlJFLyFPqvoCeO4uIrs/exec";
 
+// Save to Google Sheet
 function saveConfirmation(ug, enroll, name) {
   const checkbox = document.getElementById("confirmCheck");
-
-  if (!checkbox.checked) return; // Only save when checked
+  if (!checkbox.checked) return;
 
   fetch(`${scriptURL}?action=save&ug=${encodeURIComponent(ug)}&enroll=${encodeURIComponent(enroll)}&name=${encodeURIComponent(name)}`)
     .then(() => {
-      alert("✔ Saved to Google Sheet Successfully");
+      alert("✔ Saved to Google Sheet");
 
-      checkbox.disabled = true;           // Lock checkbox
+      checkbox.disabled = true;
       checkbox.parentElement.style.opacity = "0.6";
 
-      setTimeout(() => location.reload(), 800); // Refresh page
+      setTimeout(() => location.reload(), 600);
     })
-    .catch(() => {
-      alert("❌ Error saving data");
-      checkbox.checked = false;
-    });
+    .catch(() => alert("❌ Error saving data"));
 }
-
 </script>
 
 </body>
