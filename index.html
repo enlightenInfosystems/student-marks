@@ -75,8 +75,13 @@ function cleanName(name) {
 }
 
 function normalize(name) {
-  return name.replace(/\s+/g, "").replace(/[-()]/g, "").toLowerCase();
+  return name
+    .replace(/\s*-\s*/g, "-")   // normalize hyphens with or without spaces
+    .replace(/\s+/g, "")        // remove other spaces
+    .replace(/[-()]/g, "")      // remove -, ( )
+    .toLowerCase();
 }
+
 
 async function search() {
   const id = document.getElementById("idInput").value.trim();
@@ -97,7 +102,7 @@ async function search() {
   // CHECK IN GOOGLE SHEET
   let checkURL = `${scriptURL}?action=check&enroll=${record['Enrollment']}`;
   let check = await fetch(checkURL).then(res => res.text());
-
+alert(check);
   if (check === "FOUND") {
     document.getElementById("result").innerHTML = `
       <h3 style="color:#c00;">⚠ You have already confirmed your information.</h3>
@@ -225,3 +230,4 @@ function saveConfirmation(ug, enroll, name) {
 
 </body>
 </html>
+
