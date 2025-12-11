@@ -2,12 +2,27 @@
 <html>
 <head>
   <title>Record Search</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f0;
+    }
+  </style>
 </head>
 <body>
 
 <h2>Search Your Record</h2>
 
-<input id="idInput" placeholder="Enter Your ID">
+<input id="idInput" placeholder="Enter Enrollment / UG No / ID">
 <button onclick="search()">Search</button>
 
 <div id="result"></div>
@@ -19,13 +34,30 @@ async function search() {
   const response = await fetch("data.json");
   const data = await response.json();
 
-  const record = data.find(item => item.Enrollment === id);
+  // Search by ID, Enrollment, or UG No
+  const record = data.find(item => 
+      item["Enrollment"] === id ||
+      item["UG No."] === id ||
+      item["S.N."] === id
+  );
 
   if (record) {
-    document.getElementById("result").innerHTML = `
-      <h3>Record Found:</h3>
-      <pre>${JSON.stringify(record, null, 2)}</pre>
-    `;
+    let tableHTML = "<h3>Record Found:</h3><table>";
+
+    // Table header + rows
+    for (const key in record) {
+      tableHTML += `
+        <tr>
+          <th>${key}</th>
+          <td>${record[key]}</td>
+        </tr>
+      `;
+    }
+
+    tableHTML += "</table>";
+
+    document.getElementById("result").innerHTML = tableHTML;
+
   } else {
     document.getElementById("result").innerHTML = "❌ No record found";
   }
@@ -34,4 +66,3 @@ async function search() {
 
 </body>
 </html>
-
