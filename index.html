@@ -101,6 +101,7 @@ async function search() {
 
   // CHECK IN GOOGLE SHEET
   let checkURL = `${scriptURL}?action=check&enroll=${record['Enrollment']}`;
+  alert(checkURL);
   let check = await fetch(checkURL).then(res => res.text());
 alert(check);
   if (check === "FOUND") {
@@ -230,4 +231,5 @@ function saveConfirmation(ug, enroll, name) {
 
 </body>
 </html>
+
 
