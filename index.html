@@ -47,10 +47,6 @@
       padding: 8px;
     }
     th { background: #efefef; }
-    #confirmBox {
-      margin-top: 20px;
-      font-size: 18px;
-    }
   </style>
 </head>
 
@@ -62,7 +58,6 @@
   <span style="font-size:20px; color:#444;">Search Your Record</span>
 </h2>
 
-
   <input id="idInput" placeholder="Enter Enrollment">
   <button onclick="search()">Search</button>
 
@@ -72,7 +67,6 @@
 <script>
 const scriptURL = "https://script.google.com/macros/s/AKfycbyd-YbRmAOPML1I19-odf3P6rpeSbeum0It1yqkmVVyc5e9d4q4QKn96ecbWLGbUKAl/exec";
 
-// Normalize subject name (remove TH/PR text)
 function cleanName(name) {
   return name
     .replace(/-TH|\(TH\)|-PR|\(PR\)/g, "")
@@ -80,7 +74,6 @@ function cleanName(name) {
     .trim();
 }
 
-// Fix mismatched subject names like "AI & ML" vs "AI &ML"
 function normalize(name) {
   return name.replace(/\s+/g, "").replace(/[-()]/g, "").toLowerCase();
 }
@@ -100,20 +93,19 @@ async function search() {
     document.getElementById("result").innerHTML = "<p>❌ No record found</p>";
     return;
   }
-  // CHECK IF ALREADY SAVED
-let checkURL = `${scriptURL}?action=check&enroll=${record['Enrollment']}`;
-let check = await fetch(checkURL).then(res => res.text());
 
-if (check === "FOUND") {
-  document.getElementById("result").innerHTML = `
-    <h3 style="color:#c00;">⚠ You have already confirmed your information.</h3>
-    <p>Record confirmation is allowed only once.</p>
-  `;
-  return;
-}
+  // CHECK IN GOOGLE SHEET
+  let checkURL = `${scriptURL}?action=check&enroll=${record['Enrollment']}`;
+  let check = await fetch(checkURL).then(res => res.text());
 
+  if (check === "FOUND") {
+    document.getElementById("result").innerHTML = `
+      <h3 style="color:#c00;">⚠ You have already confirmed your information.</h3>
+      <p>Record confirmation is allowed only once.</p>
+    `;
+    return;
+  }
 
-  // Student info table
   let detailsHTML = `
     <h3>Student Details</h3>
     <table>
@@ -125,7 +117,6 @@ if (check === "FOUND") {
     </table>
   `;
 
-  // Marks table
   let marksHTML = `
     <h3>Marks</h3>
     <table>
@@ -141,18 +132,15 @@ if (check === "FOUND") {
   Object.keys(record).forEach(key => {
     if (usedKeys.has(key)) return;
 
-    // Detect THEORY keys
     if (key.match(/(TH)\)?$/)) {
-
       let subject = cleanName(key);
       let theory = record[key];
       let practical = "-";
 
       let base = cleanName(key);
-
       let normBase = normalize(base);
 
-      // SEARCH for matching PR
+      // FIX for 'Fundamentals of Web Developmen-PR'
       let prKey = Object.keys(record).find(k =>
         normalize(cleanName(k)) === normBase &&
         (k.endsWith("-PR") || k.endsWith("(PR)"))
@@ -174,7 +162,6 @@ if (check === "FOUND") {
       `;
     }
 
-    // Single-value subjects (no TH/PR)
     else if (
       typeof record[key] === "string" &&
       !key.includes("Enrollment") &&
@@ -197,7 +184,6 @@ if (check === "FOUND") {
 
   marksHTML += "</table>";
 
-  // Display both tables + checkbox
   document.getElementById("result").innerHTML = `
     <div class="grid">
       <div>${detailsHTML}</div>
@@ -205,19 +191,22 @@ if (check === "FOUND") {
     </div>
 
     <div id="confirmBox" style="margin-top:20px;">
-  <label style="font-size:20px; cursor:pointer;">
-    <input id="confirmCheck" type="checkbox" style="width:22px; height:22px; transform:scale(1.4); margin-right:10px;">
-    ✔ I confirm this information is correct
-  </label>
-</div>
-
+      <label style="font-size:20px; cursor:pointer;">
+        <input id="confirmCheck" type="checkbox" style="width:22px; height:22px; transform:scale(1.4); margin-right:10px;">
+        ✔ I confirm this information is correct
+      </label>
+      <br><br>
+      <button onclick="saveConfirmation('${record["UG No."]}', '${record["Enrollment"]}', '${record["Name"]}')">
+        Save Confirmation
+      </button>
+    </div>
   `;
 }
 
-// Save to Google Sheet
 function saveConfirmation(ug, enroll, name) {
   const checkbox = document.getElementById("confirmCheck");
- if (!check.checked) {
+
+  if (!checkbox.checked) {
     alert("⚠ Please click the checkbox before proceeding.");
     return;
   }
@@ -227,9 +216,8 @@ function saveConfirmation(ug, enroll, name) {
       alert("✔ Successfully Confirmed!");
 
       checkbox.disabled = true;
-      checkbox.parentElement.style.opacity = "0.6";
 
-      setTimeout(() => location.reload(), 600);
+      setTimeout(() => location.reload(), 800);
     })
     .catch(() => alert("❌ Error saving data"));
 }
@@ -237,5 +225,3 @@ function saveConfirmation(ug, enroll, name) {
 
 </body>
 </html>
-
-
