@@ -19,7 +19,7 @@ async function search() {
   const response = await fetch("data.json");
   const data = await response.json();
 
-  const record = data.find(item => item.ID === id);
+  const record = data.find(item => item.Enrollment === id);
 
   if (record) {
     document.getElementById("result").innerHTML = `
@@ -34,3 +34,4 @@ async function search() {
 
 </body>
 </html>
+
