@@ -5,8 +5,8 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 30px;
       background: #f8f9fa;
+      margin: 30px;
     }
     h2 { text-align: center; }
     .container {
@@ -46,10 +46,6 @@
       padding: 8px;
     }
     th { background: #efefef; }
-    #confirmBox {
-      margin-top: 20px;
-      font-size: 18px;
-    }
   </style>
 </head>
 
@@ -62,12 +58,18 @@
   <button onclick="search()">Search</button>
 
   <div id="result"></div>
+  <div id="confirmBox">
+  <label>
+    <input id="confirmCheck" type="checkbox"
+           onchange="saveConfirmation('${record['UG No.']}', '${record['Enrollment']}', '${record['Name']}')">
+    ✔ I confirm this information is correct
+  </label>
+</div>
+
 </div>
 
 <script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbwLz5LnoClX9wJEmpJrPl1s-peILBwtd3EItjjRUH9LN_afSSnpLisWnSfP7iRx2fny/exec";
 
-// Clean subject name
 function cleanName(name) {
   return name
     .replace("-TH", "")
@@ -94,19 +96,19 @@ async function search() {
     return;
   }
 
-  // Student details section
+  // Student Details
   let detailsHTML = `
     <h3>Student Details</h3>
     <table>
       <tr><th>Name</th><td>${record["Name"]}</td></tr>
       <tr><th>Enrollment</th><td>${record["Enrollment"]}</td></tr>
-      <tr><th>UG No.</th><td>${record["UG No."]}</td></tr>
-      <tr><th>Program</th><td>${record["Program"] || "-"}</td></tr>
-      <tr><th>Status</th><td>${record["Status"] || "-"}</td></tr>
+      <tr><th>UG No</th><td>${record["UG No."]}</td></tr>
+      <tr><th>Program</th><td>${record["Program"]}</td></tr>
+      <tr><th>Status</th><td>${record["Status"]}</td></tr>
     </table>
   `;
 
-  // Marks table
+  // Marks Table
   let marksHTML = `
     <h3>Marks</h3>
     <table>
@@ -117,132 +119,102 @@ async function search() {
       </tr>
   `;
 
+  // Loop keys once, process subjects
   Object.keys(record).forEach(key => {
 
-    // THEORY SUBJECT
-    if (key.endsWith("-TH") || key.endsWith("(TH)")) {
+    // THEORY SUBJECTS
+    if (key.match(/(TH)\)?$/)) {
+
       let subject = cleanName(key);
       let theory = record[key];
       let practical = "-";
 
-      // Try to find matching practical keys
-      const possiblePR = [
-        `${subject}-PR`,
-        `${subject}(PR)`,
-        `${subject} (PR)`,
-        key.replace("TH", "PR"),
-        key.replace("(TH)", "(PR)")
+      // Base subject name (removes TH)
+      let base = key
+        .replace("-TH", "")
+        .replace("(TH)", "")
+        .replace("TH", "")
+        .trim();
+
+      // Possible PR forms
+      let possiblePR = [
+        base + "-PR",
+        base + "(PR)",
+        base + " (PR)",
+        base.replace("(TH)", "(PR)"),
+        base.replace("-TH", "-PR"),
+        base.replace("TH", "PR"),
+        base.replace(" - ", " ") + "-PR"
       ];
 
-      possiblePR.forEach(k => {
-        if (record[k] !== undefined) practical = record[k];
-      });
-
-     Object.keys(record).forEach(key => {
-
-  // Detect THEORY keys
-  if (key.match(/(TH)\)?$/)) {
-
-    let subject = cleanName(key);
-    let theory = record[key];
-    let practical = "-";
-
-    // Extract base name (removes -TH, (TH), (TH) etc.)
-    let base = key
-      .replace("-TH", "")
-      .replace("(TH)", "")
-      .replace("TH", "")
-      .trim();
-
-    // Possible PR key patterns
-    let possiblePR = [
-      base + "-PR",
-      base + "(PR)",
-      base + " (PR)",
-      base.replace("(TH)", "(PR)"),
-      base.replace("-TH", "-PR"),
-      base.replace("TH", "PR"),
-      base.replace(" - ", " ") + "-PR",
-      base + "PR"
-    ];
-
-    // Search practical value from all patterns
-    for (let pk of possiblePR) {
-      let trimmedKey = pk.trim();
-      if (record[trimmedKey] !== undefined) {
-        practical = record[trimmedKey];
-        break;
+      // Find matching PR value
+      for (let prKey of possiblePR) {
+        if (record[prKey] !== undefined) {
+          practical = record[prKey];
+          break;
+        }
       }
+
+      marksHTML += `
+        <tr>
+          <td>${subject}</td>
+          <td>${theory}</td>
+          <td>${practical}</td>
+        </tr>
+      `;
     }
 
-    marksHTML += `
-      <tr>
-        <td>${subject}</td>
-        <td>${theory}</td>
-        <td>${practical}</td>
-      </tr>
-    `;
-  }
+    // SINGLE-VALUE SUBJECTS (no TH/PR)
+    else if (
+      typeof record[key] === "string" &&
+      !key.endsWith("-PR") &&
+      !key.endsWith("(PR)") &&
+      !key.match(/(TH)\)?$/) &&
+      !["Enrollment","UG No.","Name","Program","Status","S.N."].some(x => key.includes(x))
+    ) {
+      marksHTML += `
+        <tr>
+          <td>${cleanName(key)}</td>
+          <td>${record[key]}</td>
+          <td>-</td>
+        </tr>
+      `;
+    }
 
-  // Single value subjects (Basic English, Animation, NA etc.)
-  else if (
-    typeof record[key] === "string" &&
-    !key.endsWith("-PR") &&
-    !key.endsWith("(PR)") &&
-    !key.match(/(TH)\)?$/) &&
-    !key.includes("Enrollment") &&
-    !key.includes("UG No") &&
-    !key.includes("Name") &&
-    !key.includes("Program") &&
-    !key.includes("Status") &&
-    !key.includes("S.N.")
-  ) {
-    marksHTML += `
-      <tr>
-        <td>${cleanName(key)}</td>
-        <td>${record[key]}</td>
-        <td>-</td>
-      </tr>
-    `;
-  }
+  });
 
-});
+  marksHTML += `</table>`;
 
-
-  // Display layout
   document.getElementById("result").innerHTML = `
     <div class="grid">
       <div>${detailsHTML}</div>
       <div>${marksHTML}</div>
     </div>
-
-    <div id="confirmBox">
-      <label>
-        <input id="confirmCheck" type="checkbox"
-          onchange="saveConfirmation('${record['UG No.']}', '${record['Enrollment']}', '${record['Name']}')">
-        ✔ I confirm this information is correct
-      </label>
-    </div>
   `;
 }
+const scriptURL = "https://script.google.com/macros/s/AKfycbwjjT0-eaVHyNiWaiE5zjhR6ceONH4Bl1kL82s-7Y8TbFc4VUlJFLyFPqvoCeO4uIrs/exec";
 
-// Save to Google Sheet
 function saveConfirmation(ug, enroll, name) {
   const checkbox = document.getElementById("confirmCheck");
-  if (!checkbox.checked) return;
+
+  if (!checkbox.checked) return; // Only save when checked
 
   fetch(`${scriptURL}?action=save&ug=${encodeURIComponent(ug)}&enroll=${encodeURIComponent(enroll)}&name=${encodeURIComponent(name)}`)
     .then(() => {
-      alert("✔ Saved to Google Sheet");
-      checkbox.disabled = true;
-      setTimeout(() => location.reload(), 500);
+      alert("✔ Saved to Google Sheet Successfully");
+
+      checkbox.disabled = true;           // Lock checkbox
+      checkbox.parentElement.style.opacity = "0.6";
+
+      setTimeout(() => location.reload(), 800); // Refresh page
     })
-    .catch(() => alert("❌ Error saving data"));
+    .catch(() => {
+      alert("❌ Error saving data");
+      checkbox.checked = false;
+    });
 }
+
 </script>
 
 </body>
 </html>
-
-
-
