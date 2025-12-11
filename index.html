@@ -3,32 +3,107 @@
 <head>
   <title>Record Search</title>
   <style>
-    table {
-      border-collapse: collapse;
-      width: 100%;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f6fa;
+      padding: 20px;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: auto;
+      background: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    input {
+      padding: 10px;
+      width: 65%;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      margin-right: 10px;
+    }
+
+    button {
+      padding: 11px 20px;
+      border: none;
+      background: #0066ff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #004ecc;
+    }
+
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
       margin-top: 20px;
+      border: 1px solid #e1e1e1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .info-box {
+      background: #fafafa;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e1e1e1;
+    }
+
+    .info-title {
+      font-weight: bold;
+      color: #333;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
     }
     th, td {
-      border: 1px solid #333;
-      padding: 8px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
     }
     th {
-      background: #f0f0f0;
+      background: #efefef;
     }
+
     #confirmBox {
       margin-top: 20px;
-      font-size: 18px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
 
-<h2>Search Your Record</h2>
+<div class="container">
+  <h2>🔍 Search Your Academic Record</h2>
 
-<input id="idInput" placeholder="Enter Enrollment / UG No / ID">
-<button onclick="search()">Search</button>
+  <div style="text-align:center;">
+    <input id="idInput" placeholder="Enter Enrollment / UG No / ID">
+    <button onclick="search()">Search</button>
+  </div>
 
-<div id="result"></div>
+  <div id="result"></div>
+</div>
 
 <script>
 const scriptURL = "https://script.google.com/macros/s/AKfycbzu0ZAhd9q2eTOzcjvirmIhYppI_q_nY_1CkaDV9FUncGwKSKEjoWhkSeiTcsxfLFmA/exec";
@@ -46,32 +121,71 @@ async function search() {
   );
 
   if (record) {
-    let tableHTML = "<h3>Record Found:</h3><table>";
+    // Create the layout
+    let html = `
+      <div class="card">
+        <h3>Student Details</h3>
+        <div class="grid">
+          <div class="info-box">
+            <div class="info-title">Name</div>
+            ${record["Name"]}
+          </div>
+          <div class="info-box">
+            <div class="info-title">UG No.</div>
+            ${record["UG No."]}
+          </div>
+          <div class="info-box">
+            <div class="info-title">Enrollment</div>
+            ${record["Enrollment"]}
+          </div>
+          <div class="info-box">
+            <div class="info-title">ID / S.N.</div>
+            ${record["S.N."]}
+          </div>
+        </div>
 
-    for (const key in record) {
-      tableHTML += `
-        <tr>
-          <th>${key}</th>
-          <td>${record[key]}</td>
-        </tr>`;
-    }
+        <h3 style="margin-top:30px;">Subject-wise Marks</h3>
+        <table>
+          <tr>
+            <th>Subject</th>
+            <th>Theory</th>
+            <th>Practical</th>
+          </tr>
+    `;
 
-    tableHTML += "</table>";
+    // Add marks rows (auto-detect subject entries)
+    Object.keys(record).forEach(key => {
+      if (key.includes("Subject")) {
+        const subject = record[key];
+        const theory = record[key + " Theory"] ?? "-";
+        const practical = record[key + " Practical"] ?? "-";
 
-    // Add checkbox
-    tableHTML += `
-      <div id="confirmBox">
-        <label>
-          <input type="checkbox" onchange="saveConfirmation('${record['UG No.']}', '${record['Enrollment']}', '${record['Name']}')">
-          ✔ I confirm this information is correct
-        </label>
+        html += `
+          <tr>
+            <td>${subject}</td>
+            <td>${theory}</td>
+            <td>${practical}</td>
+          </tr>
+        `;
+      }
+    });
+
+    html += `
+        </table>
+
+        <div id="confirmBox">
+          <label>
+            <input type="checkbox" onchange="saveConfirmation('${record['UG No.']}', '${record['Enrollment']}', '${record['Name']}')">
+            ✔ I confirm that the above details are correct.
+          </label>
+        </div>
       </div>
     `;
 
-    document.getElementById("result").innerHTML = tableHTML;
+    document.getElementById("result").innerHTML = html;
 
   } else {
-    document.getElementById("result").innerHTML = "❌ No record found";
+    document.getElementById("result").innerHTML = "<p style='color:red;'>❌ No record found</p>";
   }
 }
 
