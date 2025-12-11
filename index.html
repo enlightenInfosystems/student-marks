@@ -57,9 +57,13 @@
 <body>
 
 <div class="container">
-  <h2>Search Your Record</h2>
+ <h2 style="text-align:center; font-weight:600; margin-bottom:20px;">
+  Parul University FITCS BCA/B.SC Semester-1 MID Semester Marks<br>
+  <span style="font-size:20px; color:#444;">Search Your Record</span>
+</h2>
 
-  <input id="idInput" placeholder="Enter Enrollment / UG No / ID">
+
+  <input id="idInput" placeholder="Enter Enrollment">
   <button onclick="search()">Search</button>
 
   <div id="result"></div>
@@ -96,6 +100,18 @@ async function search() {
     document.getElementById("result").innerHTML = "<p>❌ No record found</p>";
     return;
   }
+  // CHECK IF ALREADY SAVED
+let checkURL = `${scriptURL}?action=check&enroll=${record['Enrollment']}`;
+let check = await fetch(checkURL).then(res => res.text());
+
+if (check === "FOUND") {
+  document.getElementById("result").innerHTML = `
+    <h3 style="color:#c00;">⚠ You have already confirmed your information.</h3>
+    <p>Record confirmation is allowed only once.</p>
+  `;
+  return;
+}
+
 
   // Student info table
   let detailsHTML = `
@@ -188,24 +204,27 @@ async function search() {
       <div>${marksHTML}</div>
     </div>
 
-    <div id="confirmBox">
-      <label>
-        <input id="confirmCheck" type="checkbox"
-          onchange="saveConfirmation('${record['UG No.']}', '${record['Enrollment']}', '${record['Name']}')">
-        ✔ I confirm this information is correct
-      </label>
-    </div>
+    <div id="confirmBox" style="margin-top:20px;">
+  <label style="font-size:20px; cursor:pointer;">
+    <input id="confirmCheck" type="checkbox" style="width:22px; height:22px; transform:scale(1.4); margin-right:10px;">
+    ✔ I confirm this information is correct
+  </label>
+</div>
+
   `;
 }
 
 // Save to Google Sheet
 function saveConfirmation(ug, enroll, name) {
   const checkbox = document.getElementById("confirmCheck");
-  if (!checkbox.checked) return;
+ if (!check.checked) {
+    alert("⚠ Please click the checkbox before proceeding.");
+    return;
+  }
 
   fetch(`${scriptURL}?action=save&ug=${encodeURIComponent(ug)}&enroll=${encodeURIComponent(enroll)}&name=${encodeURIComponent(name)}`)
     .then(() => {
-      alert("✔ Saved to Google Sheet");
+      alert("✔ Successfully Confirmed!");
 
       checkbox.disabled = true;
       checkbox.parentElement.style.opacity = "0.6";
@@ -218,3 +237,4 @@ function saveConfirmation(ug, enroll, name) {
 
 </body>
 </html>
+
