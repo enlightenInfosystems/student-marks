@@ -138,40 +138,76 @@ async function search() {
         if (record[k] !== undefined) practical = record[k];
       });
 
-      marksHTML += `
-        <tr>
-          <td>${subject}</td>
-          <td>${theory}</td>
-          <td>${practical}</td>
-        </tr>
-      `;
+     Object.keys(record).forEach(key => {
+
+  // Detect THEORY keys
+  if (key.match(/(TH)\)?$/)) {
+
+    let subject = cleanName(key);
+    let theory = record[key];
+    let practical = "-";
+
+    // Extract base name (removes -TH, (TH), (TH) etc.)
+    let base = key
+      .replace("-TH", "")
+      .replace("(TH)", "")
+      .replace("TH", "")
+      .trim();
+
+    // Possible PR key patterns
+    let possiblePR = [
+      base + "-PR",
+      base + "(PR)",
+      base + " (PR)",
+      base.replace("(TH)", "(PR)"),
+      base.replace("-TH", "-PR"),
+      base.replace("TH", "PR"),
+      base.replace(" - ", " ") + "-PR",
+      base + "PR"
+    ];
+
+    // Search practical value from all patterns
+    for (let pk of possiblePR) {
+      let trimmedKey = pk.trim();
+      if (record[trimmedKey] !== undefined) {
+        practical = record[trimmedKey];
+        break;
+      }
     }
 
-    // SUBJECT WITH ONLY ONE MARK (like Basic English)
-    else if (
-      typeof record[key] === "string" &&
-      !key.includes("Enrollment") &&
-      !key.includes("UG No") &&
-      !key.includes("Name") &&
-      !key.includes("Program") &&
-      !key.includes("Status") &&
-      !key.includes("S.N.") &&
-      !key.endsWith("-PR") &&
-      !key.endsWith("(PR)") &&
-      !key.endsWith("-TH") &&
-      !key.endsWith("(TH)")
-    ) {
-      marksHTML += `
-        <tr>
-          <td>${cleanName(key)}</td>
-          <td>${record[key]}</td>
-          <td>-</td>
-        </tr>
-      `;
-    }
-  });
+    marksHTML += `
+      <tr>
+        <td>${subject}</td>
+        <td>${theory}</td>
+        <td>${practical}</td>
+      </tr>
+    `;
+  }
 
-  marksHTML += `</table>`;
+  // Single value subjects (Basic English, Animation, NA etc.)
+  else if (
+    typeof record[key] === "string" &&
+    !key.endsWith("-PR") &&
+    !key.endsWith("(PR)") &&
+    !key.match(/(TH)\)?$/) &&
+    !key.includes("Enrollment") &&
+    !key.includes("UG No") &&
+    !key.includes("Name") &&
+    !key.includes("Program") &&
+    !key.includes("Status") &&
+    !key.includes("S.N.")
+  ) {
+    marksHTML += `
+      <tr>
+        <td>${cleanName(key)}</td>
+        <td>${record[key]}</td>
+        <td>-</td>
+      </tr>
+    `;
+  }
+
+});
+
 
   // Display layout
   document.getElementById("result").innerHTML = `
@@ -207,5 +243,6 @@ function saveConfirmation(ug, enroll, name) {
 
 </body>
 </html>
+
 
 
