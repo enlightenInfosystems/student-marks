@@ -105,6 +105,7 @@ async function search() {
 
   if (!record) {
     document.getElementById("result").innerHTML = "<p>❌ No record found</p>";
+     loader.style.display = "none";
     return;
   }
 
@@ -118,6 +119,7 @@ async function search() {
       <h3 style="color:#c00;">⚠ You have already confirmed your information.</h3>
       <p>Record confirmation is allowed only once.</p>
     `;
+     loader.style.display = "none";
     return;
   }
 
@@ -241,6 +243,7 @@ function saveConfirmation(ug, enroll, name) {
 
 </body>
 </html>
+
 
 
 
