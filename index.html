@@ -60,7 +60,14 @@
 
   <input id="idInput" placeholder="Enter Enrollment">
   <button onclick="search()">Search</button>
-
+<div id="loader" style="
+  display:none;
+  margin-top:20px;
+  text-align:center;
+  font-size:18px;
+">
+  ⏳ Loading... Please wait
+</div>
   <div id="result"></div>
 </div>
 
@@ -84,6 +91,8 @@ function normalize(name) {
 
 
 async function search() {
+  const loader = document.getElementById("loader");
+   loader.style.display = "block";
   const id = document.getElementById("idInput").value.trim();
   const response = await fetch("data.json");
   const data = await response.json();
@@ -207,6 +216,7 @@ async function search() {
       </button>
     </div>
   `;
+  loader.style.display = "none";
 }
 
 function saveConfirmation(ug, enroll, name) {
@@ -231,6 +241,7 @@ function saveConfirmation(ug, enroll, name) {
 
 </body>
 </html>
+
 
 
 
